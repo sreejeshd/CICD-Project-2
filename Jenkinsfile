@@ -1,78 +1,34 @@
 pipeline {
     agent any
-    environment {
-        //be sure to replace "bhavukm" with your own Docker Hub username
-        DOCKER_IMAGE_NAME = "bhavukm/train-schedule"
-    }
     stages {
-        stage('Build') {
+        stage('Clone Repository') {
             steps {
-                echo 'Running build automation'
-                sh './gradlew build --no-daemon'
-                archiveArtifacts artifacts: 'dist/trainSchedule.zip'
+                git url: 'https://github.com/sreejeshd/CICD-Project-2.git', branch: 'main'
             }
         }
         stage('Build Docker Image') {
-            when {
-                branch 'master'
-            }
             steps {
-                script {
-                    app = docker.build(DOCKER_IMAGE_NAME)
-                    app.inside {
-                        sh 'echo Hello, World!'
-                    }
+                sh 'docker build -t your-dockerhub-username/cicd-project-2:${BUILD_NUMBER} .'
+            }
+        }
+        stage('Push Image to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh '''
+                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                        docker push your-dockerhub-username/cicd-project-2:${BUILD_NUMBER}
+                    '''
                 }
             }
         }
-        stage('Push Docker Image') {
-            when {
-                branch 'master'
-            }
+        stage('Deploy to Kubernetes') {
+            agent { label 'slave-node' }
             steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker_hub_login') {
-                        app.push("${env.BUILD_NUMBER}")
-                        app.push("latest")
-                    }
-                }
-            }
-        }
-        stage('CanaryDeploy') {
-            when {
-                branch 'master'
-            }
-            environment { 
-                CANARY_REPLICAS = 1
-            }
-            steps {
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube-canary.yml',
-                    enableConfigSubstitution: true
-                )
-            }
-        }
-        stage('DeployToProduction') {
-            when {
-                branch 'master'
-            }
-            environment { 
-                CANARY_REPLICAS = 0
-            }
-            steps {
-                input 'Deploy to Production?'
-                milestone(1)
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube-canary.yml',
-                    enableConfigSubstitution: true
-                )
-                kubernetesDeploy(
-                    kubeconfigId: 'kubeconfig',
-                    configs: 'train-schedule-kube.yml',
-                    enableConfigSubstitution: true
-                )
+                sh '''
+                    sed -i "s/BUILD_NUMBER_PLACEHOLDER/${BUILD_NUMBER}/g" deployment.yaml
+                    kubectl apply -f deployment.yaml
+                    kubectl apply -f service.yaml
+                '''
             }
         }
     }
