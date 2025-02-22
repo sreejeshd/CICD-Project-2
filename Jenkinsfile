@@ -1,23 +1,26 @@
 pipeline {
     agent any
+
+    environment {
+        dockerImage = ''
+    }
+
     stages {
-        stage('Clone Repository') {
-            steps {
-                git url: 'https://github.com/sreejeshd/CICD-Project-2.git', branch: 'main'
-            }
-        }
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t your-dockerhub-username/cicd-project-2:${BUILD_NUMBER} .'
+                script {
+                    dockerImage = docker.build("sreejeshd/cicdproject2:${env.BUILD_NUMBER}")
+                }
             }
         }
-        stage('Push Image to Docker Hub') {
+        stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh '''
-                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                        docker push your-dockerhub-username/cicd-project-2:${BUILD_NUMBER}
-                    '''
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                    script {
+                        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-credentials') {
+                            dockerImage.push()
+                        }
+                    }
                 }
             }
         }
@@ -25,9 +28,9 @@ pipeline {
             agent { label 'slave-node' }
             steps {
                 sh '''
-                    sed -i "s/BUILD_NUMBER_PLACEHOLDER/${BUILD_NUMBER}/g" deployment.yaml
-                    kubectl apply -f deployment.yaml
-                    kubectl apply -f service.yaml
+                    sed -i "s|image:.*|image: sreejeshd/cicdproject2:${BUILD_NUMBER}|g" app-deployment.yaml
+                    kubectl apply -f app-deployment.yaml
+                    kubectl apply -f app-service.yaml
                 '''
             }
         }

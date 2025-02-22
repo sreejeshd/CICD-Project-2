@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cicdproject2-deployment
+  labels:
+    app: cicdproject2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cicdproject2
+  template:
+    metadata:
+      labels:
+        app: cicdproject2
+    spec:
+      containers:
+      - name: cicdproject2-container
+        image: sreejeshd/cicdproject2:${BUILD_NUMBER}
+        ports:
+        - containerPort: 8080
