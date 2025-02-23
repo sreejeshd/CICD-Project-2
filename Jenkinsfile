@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         dockerImage = ''
+        KUBECONFIG = '/home/jenkins-slave/.kube/config'
     }
 
     stages {
