@@ -30,6 +30,7 @@ pipeline {
             steps {
                 withEnv(["KUBECONFIG=/home/jenkins-slave/.kube/config"]) {
                     sh '''
+                        echo "KUBECONFIG: $KUBECONFIG"
                         sed -i "s|image:.*|image: sreejeshd/cicdproject2:${BUILD_NUMBER}|g" app-deployment.yaml
                         kubectl apply -f app-deployment.yaml
                         kubectl apply -f app-service.yaml
