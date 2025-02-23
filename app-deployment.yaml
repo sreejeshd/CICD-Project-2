@@ -16,6 +16,7 @@ spec:
     spec:
       containers:
       - name: cicdproject2-container
-        image: sreejeshd/cicdproject2:${BUILD_NUMBER}
+        image: sreejeshd/cicdproject2:version1
+        imagePullPolicy: Always
         ports:
-        - containerPort: 8080
+        - containerPort: 3000

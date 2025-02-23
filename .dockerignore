@@ -1,4 +1,5 @@
 node_modules
 npm-debug.log
-.gradle
-dist
+Dockerfile
+.dockerignore
+.git
