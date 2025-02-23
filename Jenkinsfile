@@ -28,11 +28,13 @@ pipeline {
         stage('Deploy to Kubernetes') {
             agent { label 'slave-node' }
             steps {
-                sh '''
-                    sed -i "s|image:.*|image: sreejeshd/cicdproject2:${BUILD_NUMBER}|g" app-deployment.yaml
-                    kubectl apply -f app-deployment.yaml
-                    kubectl apply -f app-service.yaml
-                '''
+                withEnv(["KUBECONFIG=/home/jenkins-slave/.kube/config"]) {
+                    sh '''
+                        sed -i "s|image:.*|image: sreejeshd/cicdproject2:${BUILD_NUMBER}|g" app-deployment.yaml
+                        kubectl apply -f app-deployment.yaml
+                        kubectl apply -f app-service.yaml
+                    '''
+                }
             }
         }
     }
